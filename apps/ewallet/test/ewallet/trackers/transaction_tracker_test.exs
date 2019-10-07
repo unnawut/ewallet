@@ -23,7 +23,15 @@ defmodule EWallet.TransactionTrackerTest do
     test "starts a new server" do
       transaction = insert(:blockchain_transaction)
 
-      assert {:ok, pid} = TransactionTracker.start(transaction, :from_blockchain_to_ewallet)
+      # Start the tracker without subscribing to the adapter so we can test without side
+      # effects from the adapter broadcasting events to our tracker.
+      {:ok, pid} =
+        TransactionTracker.start(
+          transaction,
+          :from_blockchain_to_ewallet,
+          subscribe_adapter: false
+        )
+
       assert is_pid(pid)
       assert GenServer.stop(pid) == :ok
     end
@@ -32,7 +40,15 @@ defmodule EWallet.TransactionTrackerTest do
   describe "handle_cast/2 with :confirmations_count" do
     test "handles confirmations count when lower than minimum" do
       transaction = insert(:blockchain_transaction)
-      assert {:ok, pid} = TransactionTracker.start(transaction, :from_blockchain_to_ewallet)
+
+      # Start the tracker without subscribing to the adapter so we can test without side
+      # effects from the adapter broadcasting events to our tracker.
+      {:ok, pid} =
+        TransactionTracker.start(
+          transaction,
+          :from_blockchain_to_ewallet,
+          subscribe_adapter: false
+        )
 
       :ok = GenServer.cast(pid, {:confirmations_count, transaction.blockchain_tx_hash, 2, 1})
 
@@ -47,7 +63,15 @@ defmodule EWallet.TransactionTrackerTest do
 
     test "handles confirmations count when higher than minimum" do
       transaction = insert(:blockchain_transaction)
-      assert {:ok, pid} = TransactionTracker.start(transaction, :from_blockchain_to_ewallet)
+
+      # Start the tracker without subscribing to the adapter so we can test without side
+      # effects from the adapter broadcasting events to our tracker.
+      {:ok, pid} =
+        TransactionTracker.start(
+          transaction,
+          :from_blockchain_to_ewallet,
+          subscribe_adapter: false
+        )
 
       :ok = GenServer.cast(pid, {:confirmations_count, transaction.blockchain_tx_hash, 12, 1})
       ref = Process.monitor(pid)
@@ -64,7 +88,15 @@ defmodule EWallet.TransactionTrackerTest do
 
     test "logs a message about mismatched hash" do
       transaction = insert(:blockchain_transaction)
-      {:ok, pid} = TransactionTracker.start(transaction, :from_blockchain_to_ewallet)
+
+      # Start the tracker without subscribing to the adapter so we can test without side
+      # effects from the adapter broadcasting events to our tracker.
+      {:ok, pid} =
+        TransactionTracker.start(
+          transaction,
+          :from_blockchain_to_ewallet,
+          subscribe_adapter: false
+        )
 
       assert capture_log(fn ->
                :ok = GenServer.cast(pid, {:confirmations_count, "fake", 12, 1})

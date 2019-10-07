@@ -54,11 +54,15 @@ defmodule EWallet.TransactionTracker do
   The tracker is also registered with a registry and so can be looked up
   by its tracking transaction's uuid via the registry.
   """
-  def start(transaction, transaction_type, registry \\ @registry) do
+  def start(transaction, transaction_type, start_opts \\ []) do
+    {registry, start_opts} = Keyword.pop(start_opts, :registry, @registry)
+    {subscribe_adapter, _start_opts} = Keyword.pop(start_opts, :subscribe_adapter, true)
+
     opts = [
       transaction: transaction,
       transaction_type: transaction_type,
-      name: {:via, Registry, {registry, transaction.uuid}}
+      name: {:via, Registry, {registry, transaction.uuid}},
+      subscribe_adapter: subscribe_adapter
     ]
 
     DynamicSupervisor.start_child(@supervisor, {__MODULE__, opts})
@@ -73,12 +77,17 @@ defmodule EWallet.TransactionTracker do
   end
 
   def init(opts) do
+    {subscribe_adapter, opts} = Keyword.pop(opts, :subscribe_adapter, true)
+
     state = %{
       transaction: Keyword.fetch!(opts, :transaction),
       transaction_type: Keyword.fetch!(opts, :transaction_type)
     }
 
-    {:ok, state, {:continue, :subscribe_adapter}}
+    case subscribe_adapter do
+      true -> {:ok, state, {:continue, :subscribe_adapter}}
+      false -> {:ok, state}
+    end
   end
 
   def handle_continue(:subscribe_adapter, state) do
